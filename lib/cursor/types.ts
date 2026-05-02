@@ -1,0 +1,79 @@
+export type PublicUser = {
+  name: string
+  email?: string
+}
+
+export type ModelOption = {
+  id: string
+  label: string
+  description?: string
+}
+
+export type RepositoryOption = {
+  id: string
+  label: string
+  url: string
+  owner?: string
+  name?: string
+  defaultBranch?: string
+}
+
+export type ArtifactPreview = {
+  path: string
+  name: string
+  size?: number
+  contentType?: string
+  mediaUrl?: string
+  previewKind: "image" | "video" | "file"
+}
+
+export type AgentCard = {
+  id: string
+  title: string
+  status: string
+  latestRunId?: string
+  durationMs?: number
+  repository: string
+  repositoryUrl?: string
+  branch?: string
+  createdBy?: string
+  createdAt?: string
+  updatedAt?: string
+  prUrl?: string
+  latestMessage?: string
+  artifacts: ArtifactPreview[]
+}
+
+export type RunSummary = {
+  id?: string
+  status?: string
+  createdAt?: string
+  durationMs?: number
+  result?: string
+  branch?: string
+  prUrl?: string
+  repoUrl?: string
+}
+
+export type AgentListResponse = {
+  agents: AgentCard[]
+  nextCursor?: string
+}
+
+export type AgentDetailResponse = {
+  agent: AgentCard
+  runs: RunSummary[]
+}
+
+export type CreateAgentInput = {
+  name?: string
+  prompt: string
+  repositoryId: string
+  modelId?: string
+  branch?: string
+  autoCreatePR?: boolean
+}
+
+export type CreateAgentResponse = {
+  agent: AgentCard
+}
