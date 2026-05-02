@@ -1,20 +1,24 @@
+import './global.css';
+
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { HeroUINativeProvider, Button } from 'heroui-native';
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <HeroUINativeProvider>
+        <View className="flex-1 items-center justify-center bg-background gap-4 px-6">
+          <Button onPress={() => console.log('Pressed!')}>
+            <Button.Label>Get Started</Button.Label>
+          </Button>
+          <Button variant="secondary" onPress={() => console.log('Secondary')}>
+            <Button.Label>Learn More</Button.Label>
+          </Button>
+          <StatusBar style="auto" />
+        </View>
+      </HeroUINativeProvider>
+    </GestureHandlerRootView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

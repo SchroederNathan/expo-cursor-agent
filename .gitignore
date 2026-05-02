@@ -35,7 +35,10 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+uniwind-types.d.ts
 
 # generated native folders
 /ios
 /android
+# heroui-agents-md
+.heroui-docs/
