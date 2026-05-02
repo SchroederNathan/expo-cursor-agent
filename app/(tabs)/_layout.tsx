@@ -1,31 +1,16 @@
-import { Tabs } from "expo-router"
-import { LayoutGrid, Settings as SettingsIcon } from "lucide-react-native"
+import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs"
 
 export default function TabsLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Agents",
-          tabBarIcon: ({ color, size }) => (
-            <LayoutGrid color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Settings",
-          tabBarIcon: ({ color, size }) => (
-            <SettingsIcon color={color} size={size} />
-          ),
-        }}
-      />
-    </Tabs>
+    <NativeTabs>
+      <NativeTabs.Trigger name="(agents)">
+        <Icon sf="square.grid.2x2" />
+        <Label>Agents</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="(settings)">
+        <Icon sf="gearshape" />
+        <Label>Settings</Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
   )
 }

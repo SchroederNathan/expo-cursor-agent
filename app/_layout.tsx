@@ -1,6 +1,6 @@
 import "../global.css"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { ActivityIndicator, View } from "react-native"
 import { Stack, useRouter, useSegments } from "expo-router"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
@@ -8,7 +8,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context"
 import { HeroUINativeProvider } from "heroui-native"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
-import { getApiKey } from "@/lib/auth/storage"
+import { AuthProvider, useAuth } from "@/lib/auth/context"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,22 +20,9 @@ const queryClient = new QueryClient({
 })
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const [ready, setReady] = useState(false)
-  const [hasKey, setHasKey] = useState(false)
+  const { ready, hasKey } = useAuth()
   const segments = useSegments()
   const router = useRouter()
-
-  useEffect(() => {
-    let cancelled = false
-    getApiKey().then((key) => {
-      if (cancelled) return
-      setHasKey(Boolean(key))
-      setReady(true)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   useEffect(() => {
     if (!ready) return
@@ -64,14 +51,16 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <HeroUINativeProvider>
           <QueryClientProvider client={queryClient}>
-            <AuthGate>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="onboarding" />
-                <Stack.Screen name="index" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="agent/[id]" />
-              </Stack>
-            </AuthGate>
+            <AuthProvider>
+              <AuthGate>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="onboarding" />
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="agent/[id]" />
+                </Stack>
+              </AuthGate>
+            </AuthProvider>
           </QueryClientProvider>
         </HeroUINativeProvider>
       </SafeAreaProvider>

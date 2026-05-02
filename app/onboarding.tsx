@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { Keyboard, Text, View } from "react-native"
-import { useRouter } from "expo-router"
 import { SafeAreaView } from "react-native-safe-area-context"
 import {
   Alert,
@@ -13,13 +12,13 @@ import {
 } from "heroui-native"
 
 import { apiFetch, ApiError } from "@/lib/api/client"
-import { setApiKey } from "@/lib/auth/storage"
+import { useAuth } from "@/lib/auth/context"
 import type { PublicUser } from "@/lib/cursor/types"
 
 type MeResponse = { user: PublicUser | null }
 
 export default function OnboardingScreen() {
-  const router = useRouter()
+  const { signIn } = useAuth()
   const [value, setValue] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,8 +35,7 @@ export default function OnboardingScreen() {
     setError(null)
     try {
       await apiFetch<MeResponse>("/api/me", { apiKey: trimmed })
-      await setApiKey(trimmed)
-      router.replace("/")
+      await signIn(trimmed)
     } catch (err) {
       const message =
         err instanceof ApiError
@@ -75,8 +73,7 @@ export default function OnboardingScreen() {
             autoComplete="off"
             spellCheck={false}
             editable={!submitting}
-            secureTextEntry
-            textContentType="password"
+            textContentType="none"
             onSubmitEditing={onSubmit}
           />
           <Description>

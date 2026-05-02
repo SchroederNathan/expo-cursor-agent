@@ -1,18 +1,17 @@
-import { Text, View } from "react-native"
-import { useRouter } from "expo-router"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { ScrollView, Text, View } from "react-native"
+import { Stack } from "expo-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Button, Spinner } from "heroui-native"
 
 import { apiFetch } from "@/lib/api/client"
-import { clearApiKey } from "@/lib/auth/storage"
+import { useAuth } from "@/lib/auth/context"
 import type { PublicUser } from "@/lib/cursor/types"
 
 type MeResponse = { user: PublicUser | null }
 
 export default function SettingsScreen() {
-  const router = useRouter()
   const queryClient = useQueryClient()
+  const { signOut } = useAuth()
 
   const { data, isPending, error } = useQuery({
     queryKey: ["me"],
@@ -20,16 +19,22 @@ export default function SettingsScreen() {
   })
 
   const onSignOut = async () => {
-    await clearApiKey()
     queryClient.clear()
-    router.replace("/onboarding")
+    await signOut()
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
-      <View className="px-6 pt-4 gap-6">
-        <Text className="text-3xl font-semibold text-foreground">Settings</Text>
-
+    <>
+      <Stack.Screen options={{ title: "Settings", headerLargeTitle: true }} />
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{
+          paddingHorizontal: 24,
+          paddingTop: 8,
+          paddingBottom: 32,
+          gap: 24,
+        }}
+      >
         <View className="gap-2">
           <Text className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
             Signed in
@@ -57,7 +62,7 @@ export default function SettingsScreen() {
             <Button.Label>Sign out</Button.Label>
           </Button>
         </View>
-      </View>
-    </SafeAreaView>
+      </ScrollView>
+    </>
   )
 }
