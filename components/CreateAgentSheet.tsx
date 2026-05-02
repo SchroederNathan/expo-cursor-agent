@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Text, View } from "react-native"
+import { ScrollView, Text, View } from "react-native"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
@@ -149,14 +149,23 @@ export function CreateAgentSheet({ isOpen, onOpenChange }: Props) {
                     </Select.Trigger>
                     <Select.Portal>
                       <Select.Overlay />
-                      <Select.Content width="trigger">
-                        {repositories.map((repo) => (
-                          <Select.Item
-                            key={repo.id}
-                            value={repo.id}
-                            label={repo.label}
-                          />
-                        ))}
+                      <Select.Content
+                        width="trigger"
+                        style={{ maxHeight: 320 }}
+                      >
+                        <ScrollView
+                          showsVerticalScrollIndicator
+                          keyboardShouldPersistTaps="handled"
+                          nestedScrollEnabled
+                        >
+                          {repositories.map((repo) => (
+                            <Select.Item
+                              key={repo.id}
+                              value={repo.id}
+                              label={repo.label}
+                            />
+                          ))}
+                        </ScrollView>
                       </Select.Content>
                     </Select.Portal>
                   </Select>
@@ -172,15 +181,24 @@ export function CreateAgentSheet({ isOpen, onOpenChange }: Props) {
                   </Select.Trigger>
                   <Select.Portal>
                     <Select.Overlay />
-                    <Select.Content width="trigger">
-                      <Select.Item value="auto" label="Auto" />
-                      {models.map((model) => (
-                        <Select.Item
-                          key={model.id}
-                          value={model.id}
-                          label={model.label}
-                        />
-                      ))}
+                    <Select.Content
+                      width="trigger"
+                      style={{ maxHeight: 320 }}
+                    >
+                      <ScrollView
+                        showsVerticalScrollIndicator
+                        keyboardShouldPersistTaps="handled"
+                        nestedScrollEnabled
+                      >
+                        <Select.Item value="auto" label="Auto" />
+                        {models.map((model) => (
+                          <Select.Item
+                            key={model.id}
+                            value={model.id}
+                            label={model.label}
+                          />
+                        ))}
+                      </ScrollView>
                     </Select.Content>
                   </Select.Portal>
                 </Select>
