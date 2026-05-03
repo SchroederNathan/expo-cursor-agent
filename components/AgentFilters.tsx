@@ -1,4 +1,4 @@
-import { ScrollView, View } from "react-native"
+import { ScrollView, Text, View } from "react-native"
 import { TagGroup } from "heroui-native"
 
 import type { Filter, GroupBy } from "@/lib/utils/agents"
@@ -18,11 +18,7 @@ export function AgentFilters({
 }: Props) {
   return (
     <View className="gap-3">
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8, paddingHorizontal: 24 }}
-      >
+      <FilterRow label="Group by">
         <TagGroup
           selectionMode="single"
           selectedKeys={new Set([groupBy])}
@@ -32,18 +28,14 @@ export function AgentFilters({
           }}
         >
           <TagGroup.List>
-            <TagGroup.Item id="status">By status</TagGroup.Item>
-            <TagGroup.Item id="repo">By repo</TagGroup.Item>
-            <TagGroup.Item id="date">By date</TagGroup.Item>
+            <TagGroup.Item id="status">Status</TagGroup.Item>
+            <TagGroup.Item id="repo">Repo</TagGroup.Item>
+            <TagGroup.Item id="date">Date</TagGroup.Item>
           </TagGroup.List>
         </TagGroup>
-      </ScrollView>
+      </FilterRow>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8, paddingHorizontal: 24 }}
-      >
+      <FilterRow label="Filter">
         <TagGroup
           selectionMode="single"
           selectedKeys={new Set([filter])}
@@ -59,6 +51,29 @@ export function AgentFilters({
             <TagGroup.Item id="recentlyActive">Last 24h</TagGroup.Item>
           </TagGroup.List>
         </TagGroup>
+      </FilterRow>
+    </View>
+  )
+}
+
+function FilterRow({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <View className="gap-1.5">
+      <Text className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold px-6">
+        {label}
+      </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 8, paddingHorizontal: 24 }}
+      >
+        {children}
       </ScrollView>
     </View>
   )

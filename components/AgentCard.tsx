@@ -1,10 +1,14 @@
 import { Image } from "expo-image"
 import { formatDistanceToNow } from "date-fns"
-import { Pressable, Text, View } from "react-native"
-import { Card } from "heroui-native"
+import { Text, View } from "react-native"
+import { Card, Chip, PressableFeedback, Separator } from "heroui-native"
+import { GitPullRequest } from "lucide-react-native"
 
 import { StatusChip } from "@/components/StatusChip"
-import type { AgentCard as AgentCardType, ArtifactPreview } from "@/lib/cursor/types"
+import type {
+  AgentCard as AgentCardType,
+  ArtifactPreview,
+} from "@/lib/cursor/types"
 import { authHeader } from "@/lib/api/client"
 import { useEffect, useState } from "react"
 
@@ -15,49 +19,57 @@ type Props = {
 
 export function AgentCard({ agent, onPress }: Props) {
   return (
-    <Pressable onPress={() => onPress(agent)}>
-      <Card className="mb-3">
-        <Card.Body className="gap-2">
-          <View className="flex-row items-start justify-between gap-3">
-            <Text
-              className="flex-1 text-base font-semibold text-foreground"
-              numberOfLines={2}
-            >
-              {agent.title}
-            </Text>
-            <StatusChip status={agent.status} />
-          </View>
-
-          {agent.repository ? (
-            <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-              {agent.repository}
-              {agent.branch ? ` · ${agent.branch}` : ""}
-            </Text>
-          ) : null}
-
-          {agent.latestMessage ? (
-            <Text className="text-sm text-foreground" numberOfLines={2}>
-              {agent.latestMessage}
-            </Text>
-          ) : null}
-
-          {agent.artifacts.length > 0 ? (
-            <ArtifactStrip artifacts={agent.artifacts} />
-          ) : null}
-
-          <View className="flex-row items-center justify-between mt-1">
-            <Text className="text-xs text-muted-foreground">
-              {formatRelative(agent.updatedAt ?? agent.createdAt)}
-            </Text>
-            {agent.prUrl ? (
-              <Text className="text-xs text-accent" numberOfLines={1}>
-                PR open
-              </Text>
+    <PressableFeedback
+      onPress={() => onPress(agent)}
+      accessibilityRole="button"
+      accessibilityLabel={`Open agent ${agent.title}`}
+      className="mb-3"
+    >
+      <Card>
+        <Card.Header className="flex-row items-start gap-3">
+          <View className="flex-1 gap-0.5">
+            <Card.Title numberOfLines={2}>{agent.title}</Card.Title>
+            {agent.repository ? (
+              <Card.Description numberOfLines={1}>
+                {agent.repository}
+                {agent.branch ? ` · ${agent.branch}` : ""}
+              </Card.Description>
             ) : null}
           </View>
-        </Card.Body>
+          <StatusChip status={agent.status} />
+        </Card.Header>
+
+        {agent.latestMessage || agent.artifacts.length > 0 ? (
+          <Card.Body className="gap-3 pt-3">
+            {agent.latestMessage ? (
+              <Text
+                className="text-sm text-foreground leading-5"
+                numberOfLines={2}
+              >
+                {agent.latestMessage}
+              </Text>
+            ) : null}
+
+            {agent.artifacts.length > 0 ? (
+              <ArtifactStrip artifacts={agent.artifacts} />
+            ) : null}
+          </Card.Body>
+        ) : null}
+
+        <Separator className="mt-3" />
+        <Card.Footer className="flex-row items-center justify-between pt-3">
+          <Text className="text-xs text-muted-foreground">
+            {formatRelative(agent.updatedAt ?? agent.createdAt)}
+          </Text>
+          {agent.prUrl ? (
+            <Chip color="accent" variant="soft" size="sm">
+              <GitPullRequest size={12} className="text-accent" />
+              <Chip.Label>PR open</Chip.Label>
+            </Chip>
+          ) : null}
+        </Card.Footer>
       </Card>
-    </Pressable>
+    </PressableFeedback>
   )
 }
 
@@ -68,7 +80,7 @@ function ArtifactStrip({ artifacts }: { artifacts: ArtifactPreview[] }) {
   if (previewable.length === 0) return null
 
   return (
-    <View className="flex-row gap-2 mt-1">
+    <View className="flex-row gap-2">
       {previewable.slice(0, 4).map((artifact) => (
         <ArtifactThumbnail key={artifact.path} artifact={artifact} />
       ))}

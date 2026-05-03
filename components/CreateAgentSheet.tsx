@@ -2,6 +2,7 @@ import { useState } from "react"
 import { ScrollView, Text, View } from "react-native"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { LinearGradient } from "expo-linear-gradient"
 import { useRouter } from "expo-router"
 import {
   BottomSheet,
@@ -10,10 +11,12 @@ import {
   FieldError,
   Input,
   Label,
+  ScrollShadow,
   Select,
   Spinner,
   Switch,
   TextField,
+  useThemeColor,
 } from "heroui-native"
 
 import { createAgent, getModels, getRepositories } from "@/lib/api/agents"
@@ -30,6 +33,7 @@ const AUTO_MODEL: SelectOption = { value: "auto", label: "Auto" }
 export function CreateAgentSheet({ isOpen, onOpenChange }: Props) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const overlayColor = useThemeColor("overlay")
   const [prompt, setPrompt] = useState("")
   const [repositoryOption, setRepositoryOption] = useState<SelectOption>(undefined)
   const [modelOption, setModelOption] = useState<SelectOption>(AUTO_MODEL)
@@ -153,19 +157,25 @@ export function CreateAgentSheet({ isOpen, onOpenChange }: Props) {
                         width="trigger"
                         style={{ maxHeight: 320 }}
                       >
-                        <ScrollView
-                          showsVerticalScrollIndicator
-                          keyboardShouldPersistTaps="handled"
-                          nestedScrollEnabled
+                        <ScrollShadow
+                          size={24}
+                          color={overlayColor}
+                          LinearGradientComponent={LinearGradient}
                         >
-                          {repositories.map((repo) => (
-                            <Select.Item
-                              key={repo.id}
-                              value={repo.id}
-                              label={repo.label}
-                            />
-                          ))}
-                        </ScrollView>
+                          <ScrollView
+                            showsVerticalScrollIndicator
+                            keyboardShouldPersistTaps="handled"
+                            nestedScrollEnabled
+                          >
+                            {repositories.map((repo) => (
+                              <Select.Item
+                                key={repo.id}
+                                value={repo.id}
+                                label={repo.label}
+                              />
+                            ))}
+                          </ScrollView>
+                        </ScrollShadow>
                       </Select.Content>
                     </Select.Portal>
                   </Select>
@@ -185,20 +195,26 @@ export function CreateAgentSheet({ isOpen, onOpenChange }: Props) {
                       width="trigger"
                       style={{ maxHeight: 320 }}
                     >
-                      <ScrollView
-                        showsVerticalScrollIndicator
-                        keyboardShouldPersistTaps="handled"
-                        nestedScrollEnabled
+                      <ScrollShadow
+                        size={24}
+                        color={overlayColor}
+                        LinearGradientComponent={LinearGradient}
                       >
-                        <Select.Item value="auto" label="Auto" />
-                        {models.map((model) => (
-                          <Select.Item
-                            key={model.id}
-                            value={model.id}
-                            label={model.label}
-                          />
-                        ))}
-                      </ScrollView>
+                        <ScrollView
+                          showsVerticalScrollIndicator
+                          keyboardShouldPersistTaps="handled"
+                          nestedScrollEnabled
+                        >
+                          <Select.Item value="auto" label="Auto" />
+                          {models.map((model) => (
+                            <Select.Item
+                              key={model.id}
+                              value={model.id}
+                              label={model.label}
+                            />
+                          ))}
+                        </ScrollView>
+                      </ScrollShadow>
                     </Select.Content>
                   </Select.Portal>
                 </Select>
