@@ -1,15 +1,15 @@
-import { Image } from "expo-image"
 import { formatDistanceToNow } from "date-fns"
-import { Text, View } from "react-native"
+import { Image } from "expo-image"
 import { Card, Chip, PressableFeedback, Separator } from "heroui-native"
 import { GitPullRequest } from "lucide-react-native"
+import { Text, View } from "react-native"
 
 import { StatusChip } from "@/components/StatusChip"
+import { authHeader } from "@/lib/api/client"
 import type {
   AgentCard as AgentCardType,
   ArtifactPreview,
 } from "@/lib/cursor/types"
-import { authHeader } from "@/lib/api/client"
 import { useEffect, useState } from "react"
 
 type Props = {
@@ -23,7 +23,7 @@ export function AgentCard({ agent, onPress }: Props) {
       onPress={() => onPress(agent)}
       accessibilityRole="button"
       accessibilityLabel={`Open agent ${agent.title}`}
-      className="mb-3"
+      className="mb-3 overflow-visible rounded-sm"
     >
       <Card>
         <Card.Header className="flex-row items-start gap-3">

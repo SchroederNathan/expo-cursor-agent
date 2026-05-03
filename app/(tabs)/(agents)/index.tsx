@@ -84,7 +84,7 @@ export default function AgentsScreen() {
           contentInsetAdjustmentBehavior="automatic"
           sections={sections}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32, overflow: "visible" }}
           stickySectionHeadersEnabled
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -100,7 +100,7 @@ export default function AgentsScreen() {
             </View>
           }
           renderSectionHeader={({ section }) => (
-            <View className="bg-background pt-3 pb-2 flex-row items-center gap-2">
+            <View className="pt-3 pb-2 flex-row items-center gap-2">
               <Text className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
                 {section.title}
               </Text>
