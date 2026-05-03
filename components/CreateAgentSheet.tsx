@@ -136,9 +136,7 @@ export function CreateAgentSheet({ isOpen, onOpenChange }: Props) {
                 <Text className="text-sm font-medium text-foreground">
                   Repository
                 </Text>
-                {reposQuery.isPending ? (
-                  <Spinner />
-                ) : repositories.length === 0 ? (
+                {!reposQuery.isPending && repositories.length === 0 ? (
                   <Text className="text-sm text-muted-foreground">
                     No repositories found. Connect Cursor’s GitHub App first.
                   </Text>
@@ -146,10 +144,15 @@ export function CreateAgentSheet({ isOpen, onOpenChange }: Props) {
                   <Select
                     value={repositoryOption}
                     onValueChange={setRepositoryOption}
+                    isDisabled={reposQuery.isPending}
                   >
                     <Select.Trigger>
                       <Select.Value placeholder="Choose a repository" />
-                      <Select.TriggerIndicator />
+                      {reposQuery.isPending ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <Select.TriggerIndicator />
+                      )}
                     </Select.Trigger>
                     <Select.Portal>
                       <Select.Overlay />
