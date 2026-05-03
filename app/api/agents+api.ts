@@ -1,9 +1,6 @@
+import { createCloudAgent, listCloudAgents } from "@/lib/cursor/agents"
+import { requireApiKey } from "@/lib/cursor/client"
 import { jsonError } from "@/lib/cursor/http"
-import {
-  createCloudAgent,
-  listCloudAgents,
-  requireApiKey,
-} from "@/lib/cursor/server"
 import type { CreateAgentInput } from "@/lib/cursor/types"
 
 export async function GET(request: Request) {

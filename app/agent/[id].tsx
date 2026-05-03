@@ -1,39 +1,73 @@
 import {
+  KeyboardAvoidingView,
   Linking,
+  Platform,
   PlatformColor,
   RefreshControl,
   ScrollView,
   Text,
   View,
 } from "react-native"
-import { Stack, useLocalSearchParams } from "expo-router"
-import { useQuery } from "@tanstack/react-query"
+import { Stack, useLocalSearchParams, useRouter } from "expo-router"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { formatDistanceToNow } from "date-fns"
 import {
+  Archive,
+  ArchiveRestore,
   ExternalLink,
   GitBranch,
   GitPullRequest,
   MessageSquare,
+  MoreHorizontal,
+  Send,
+  Square,
+  Trash2,
 } from "lucide-react-native"
 import {
   Accordion,
   Alert,
   Button,
   Card,
+  Dialog,
+  Menu,
+  PressableFeedback,
   SkeletonGroup,
   Surface,
+  TextArea,
+  TextField,
 } from "heroui-native"
+import { useEffect, useRef, useState } from "react"
 
 import { ArtifactGrid } from "@/components/ArtifactGrid"
 import { StatusChip } from "@/components/StatusChip"
-import { getAgent } from "@/lib/api/agents"
+import {
+  archiveAgent,
+  cancelRun,
+  deleteAgent,
+  getAgent,
+  sendFollowup,
+  unarchiveAgent,
+} from "@/lib/api/agents"
 import type {
   AgentCard as AgentCardType,
   AgentDetailResponse,
   RunSummary,
 } from "@/lib/cursor/types"
 
+const ACTIVE_STATUSES = new Set(["RUNNING", "CREATING", "running", "creating"])
+
+function isActive(status: string | undefined) {
+  if (!status) return false
+  return ACTIVE_STATUSES.has(status) || ACTIVE_STATUSES.has(status.toUpperCase())
+}
+
+function isArchived(status: string | undefined) {
+  return status?.toLowerCase() === "archived"
+}
+
 export default function AgentDetailScreen() {
+  const router = useRouter()
+  const queryClient = useQueryClient()
   const { id } = useLocalSearchParams<{ id: string }>()
   const agentId = String(id ?? "")
 
@@ -41,7 +75,46 @@ export default function AgentDetailScreen() {
     queryKey: ["agent", agentId],
     queryFn: () => getAgent(agentId),
     enabled: Boolean(agentId),
-    refetchInterval: 15_000,
+    refetchInterval: (query) => {
+      const status = query.state.data?.agent?.status
+      return isActive(status) ? 1500 : 30_000
+    },
+  })
+
+  const latestRunId = data?.agent?.latestRunId
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["agent", agentId] })
+    queryClient.invalidateQueries({ queryKey: ["agents"] })
+  }
+
+  const followupMutation = useMutation({
+    mutationFn: (prompt: string) => sendFollowup(agentId, prompt),
+    onSuccess: invalidate,
+  })
+
+  const cancelMutation = useMutation({
+    mutationFn: () => {
+      if (!latestRunId) throw new Error("No active run to cancel.")
+      return cancelRun(agentId, latestRunId)
+    },
+    onSuccess: invalidate,
+  })
+
+  const archiveMutation = useMutation({
+    mutationFn: () =>
+      isArchived(data?.agent?.status)
+        ? unarchiveAgent(agentId)
+        : archiveAgent(agentId),
+    onSuccess: invalidate,
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteAgent(agentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agents"] })
+      router.back()
+    },
   })
 
   return (
@@ -58,6 +131,16 @@ export default function AgentDetailScreen() {
           headerTitleStyle: {
             color: PlatformColor("label") as unknown as string,
           },
+          headerRight: () =>
+            data?.agent ? (
+              <AgentMenu
+                agent={data.agent}
+                cancelDisabled={!latestRunId || cancelMutation.isPending}
+                onCancel={() => cancelMutation.mutate()}
+                onArchive={() => archiveMutation.mutate()}
+                onDelete={() => deleteMutation.mutate()}
+              />
+            ) : null,
         }}
       />
       {isPending ? (
@@ -68,11 +151,27 @@ export default function AgentDetailScreen() {
           onRetry={() => refetch()}
         />
       ) : (
-        <DetailBody
-          data={data!}
-          isRefetching={isRefetching}
-          onRefresh={() => refetch()}
-        />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          className="flex-1"
+          keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+        >
+          <DetailBody
+            data={data!}
+            isRefetching={isRefetching}
+            onRefresh={() => refetch()}
+          />
+          <FollowupComposer
+            agent={data!.agent}
+            isPending={followupMutation.isPending}
+            error={followupMutation.error}
+            onSend={(prompt) =>
+              followupMutation.mutate(prompt, {
+                onSuccess: () => followupMutation.reset(),
+              })
+            }
+          />
+        </KeyboardAvoidingView>
       )}
     </>
   )
@@ -92,7 +191,7 @@ function DetailBody({
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
+      contentContainerStyle={{ padding: 20, paddingBottom: 24, gap: 20 }}
       refreshControl={
         <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
       }
@@ -110,9 +209,7 @@ function DetailBody({
             </Text>
           </Card.Header>
           <Card.Body>
-            <Text className="text-sm text-foreground leading-5">
-              {agent.latestMessage}
-            </Text>
+            <StreamingText text={agent.latestMessage} />
           </Card.Body>
         </Card>
       ) : null}
@@ -151,6 +248,178 @@ function DetailBody({
         )}
       </Section>
     </ScrollView>
+  )
+}
+
+function FollowupComposer({
+  agent,
+  isPending,
+  error,
+  onSend,
+}: {
+  agent: AgentCardType
+  isPending: boolean
+  error: unknown
+  onSend: (prompt: string) => void
+}) {
+  const [value, setValue] = useState("")
+  const disabled =
+    agent.status?.toUpperCase() === "EXPIRED" ||
+    agent.status?.toUpperCase() === "ERROR"
+
+  const trimmed = value.trim()
+
+  return (
+    <View className="border-t border-border bg-background px-4 pt-3 pb-6 gap-2">
+      {error ? (
+        <Text className="text-xs text-danger">
+          {(error as Error).message}
+        </Text>
+      ) : null}
+      <View className="flex-row items-end gap-2">
+        <TextField className="flex-1">
+          <TextArea
+            placeholder={
+              disabled
+                ? "Agent is no longer available."
+                : "Send a follow-up to the agent…"
+            }
+            value={value}
+            onChangeText={setValue}
+            editable={!disabled && !isPending}
+            multiline
+            numberOfLines={3}
+          />
+        </TextField>
+        <Button
+          variant="primary"
+          size="md"
+          isDisabled={disabled || isPending || !trimmed}
+          onPress={() => {
+            if (!trimmed) return
+            onSend(trimmed)
+            setValue("")
+          }}
+        >
+          <Send size={16} className="text-accent-foreground" />
+          <Button.Label>{isPending ? "Sending…" : "Send"}</Button.Label>
+        </Button>
+      </View>
+    </View>
+  )
+}
+
+function StreamingText({ text }: { text: string }) {
+  const previousLength = useRef(text.length)
+  const [appendedAt, setAppendedAt] = useState<number>(0)
+
+  useEffect(() => {
+    if (text.length > previousLength.current) {
+      setAppendedAt(Date.now())
+    }
+    previousLength.current = text.length
+  }, [text])
+
+  // appendedAt is read so a re-render is triggered when text grows; the visual
+  // animation hook is intentionally minimal — RN doesn't need extra props here.
+  void appendedAt
+
+  return (
+    <Text className="text-sm text-foreground leading-5" selectable>
+      {text}
+    </Text>
+  )
+}
+
+function AgentMenu({
+  agent,
+  cancelDisabled,
+  onCancel,
+  onArchive,
+  onDelete,
+}: {
+  agent: AgentCardType
+  cancelDisabled: boolean
+  onCancel: () => void
+  onArchive: () => void
+  onDelete: () => void
+}) {
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const archived = isArchived(agent.status)
+  const canCancel = isActive(agent.status) && !cancelDisabled
+
+  return (
+    <>
+      <Menu>
+        <Menu.Trigger>
+          <PressableFeedback
+            hitSlop={12}
+            accessibilityLabel="Agent actions"
+            className="w-9 h-9 items-center justify-center"
+          >
+            <MoreHorizontal size={22} className="text-foreground" />
+          </PressableFeedback>
+        </Menu.Trigger>
+        <Menu.Portal>
+          <Menu.Overlay />
+          <Menu.Content presentation="popover" width={220}>
+            {canCancel ? (
+              <Menu.Item onPress={onCancel}>
+                <Square size={14} className="text-foreground" />
+                <Menu.ItemTitle>Cancel run</Menu.ItemTitle>
+              </Menu.Item>
+            ) : null}
+            <Menu.Item onPress={onArchive}>
+              {archived ? (
+                <ArchiveRestore size={14} className="text-foreground" />
+              ) : (
+                <Archive size={14} className="text-foreground" />
+              )}
+              <Menu.ItemTitle>
+                {archived ? "Unarchive" : "Archive"}
+              </Menu.ItemTitle>
+            </Menu.Item>
+            <Menu.Item onPress={() => setConfirmOpen(true)}>
+              <Trash2 size={14} className="text-danger" />
+              <Menu.ItemTitle>Delete</Menu.ItemTitle>
+            </Menu.Item>
+          </Menu.Content>
+        </Menu.Portal>
+      </Menu>
+
+      <Dialog isOpen={confirmOpen} onOpenChange={setConfirmOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay />
+          <Dialog.Content>
+            <Dialog.Close />
+            <Dialog.Title>Delete agent?</Dialog.Title>
+            <Dialog.Description>
+              This will permanently remove the agent and its runs. This cannot
+              be undone.
+            </Dialog.Description>
+            <View className="flex-row gap-2 pt-3">
+              <Button
+                variant="ghost"
+                className="flex-1"
+                onPress={() => setConfirmOpen(false)}
+              >
+                <Button.Label>Cancel</Button.Label>
+              </Button>
+              <Button
+                variant="danger"
+                className="flex-1"
+                onPress={() => {
+                  setConfirmOpen(false)
+                  onDelete()
+                }}
+              >
+                <Button.Label>Delete</Button.Label>
+              </Button>
+            </View>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog>
+    </>
   )
 }
 

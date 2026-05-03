@@ -1,4 +1,8 @@
-import { useQuery } from "@tanstack/react-query"
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { Stack, useRouter } from "expo-router"
 import {
   Alert,
@@ -9,14 +13,20 @@ import {
   SkeletonGroup,
 } from "heroui-native"
 import { useMemo, useState } from "react"
-import { RefreshControl, SectionList, Text, View } from "react-native"
+import { ActivityIndicator, RefreshControl, SectionList, Text, View } from "react-native"
 
 import { Plus } from "lucide-react-native"
 
-import { AgentCard } from "@/components/AgentCard"
 import { AgentFilters } from "@/components/AgentFilters"
 import { CreateAgentSheet } from "@/components/CreateAgentSheet"
-import { listAgents } from "@/lib/api/agents"
+import { SwipeableAgentRow } from "@/components/SwipeableAgentRow"
+import {
+  archiveAgent,
+  deleteAgent,
+  listAgents,
+  unarchiveAgent,
+} from "@/lib/api/agents"
+import type { AgentCard as AgentCardType } from "@/lib/cursor/types"
 import {
   filterAgents,
   groupAgents,
@@ -24,23 +34,55 @@ import {
   type GroupBy,
 } from "@/lib/utils/agents"
 
+function isArchived(status: string | undefined) {
+  return status?.toLowerCase() === "archived"
+}
+
 export default function AgentsScreen() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [groupBy, setGroupBy] = useState<GroupBy>("status")
   const [filter, setFilter] = useState<Filter>("all")
 
-  const { data, isPending, error, refetch } = useQuery({
+  const {
+    data,
+    isPending,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["agents"],
-    queryFn: () => listAgents(),
+    queryFn: ({ pageParam }) =>
+      listAgents({ cursor: pageParam as string | undefined }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor,
     refetchInterval: 30_000,
   })
 
+  const agents = useMemo(
+    () => data?.pages.flatMap((p) => p.agents) ?? [],
+    [data]
+  )
+
   const sections = useMemo(() => {
-    const filtered = filterAgents(data?.agents ?? [], filter)
+    const filtered = filterAgents(agents, filter)
     return groupAgents(filtered, groupBy)
-  }, [data?.agents, filter, groupBy])
+  }, [agents, filter, groupBy])
+
+  const archiveMutation = useMutation({
+    mutationFn: (agent: AgentCardType) =>
+      isArchived(agent.status) ? unarchiveAgent(agent.id) : archiveAgent(agent.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agents"] }),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (agent: AgentCardType) => deleteAgent(agent.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agents"] }),
+  })
 
   const onRefresh = async () => {
     setRefreshing(true)
@@ -51,7 +93,7 @@ export default function AgentsScreen() {
     }
   }
 
-  const total = data?.agents.length ?? 0
+  const total = agents.length
 
   return (
     <>
@@ -89,6 +131,10 @@ export default function AgentsScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
+          onEndReachedThreshold={0.4}
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) fetchNextPage()
+          }}
           ListHeaderComponent={
             <View className="pb-3 -mx-6 pt-2">
               <AgentFilters
@@ -110,11 +156,20 @@ export default function AgentsScreen() {
             </View>
           )}
           renderItem={({ item }) => (
-            <AgentCard
+            <SwipeableAgentRow
               agent={item}
               onPress={(agent) => router.push(`/agent/${agent.id}`)}
+              onArchive={(agent) => archiveMutation.mutate(agent)}
+              onDelete={(agent) => deleteMutation.mutate(agent)}
             />
           )}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <View className="py-4 items-center">
+                <ActivityIndicator />
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <AgentsEmptyState
               total={total}

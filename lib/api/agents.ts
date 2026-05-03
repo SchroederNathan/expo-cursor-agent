@@ -4,8 +4,11 @@ import type {
   AgentListResponse,
   CreateAgentInput,
   CreateAgentResponse,
+  ListResult,
   ModelOption,
   RepositoryOption,
+  RunSummary,
+  SendFollowupResponse,
 } from "@/lib/cursor/types"
 
 export function listAgents(params?: {
@@ -32,6 +35,59 @@ export function createAgent(
     method: "POST",
     body: input,
   })
+}
+
+export function deleteAgent(id: string): Promise<void> {
+  return apiFetch<void>(`/api/agents/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  })
+}
+
+export function archiveAgent(id: string): Promise<{ archived: boolean }> {
+  return apiFetch<{ archived: boolean }>(
+    `/api/agents/${encodeURIComponent(id)}/archive`,
+    { method: "POST" }
+  )
+}
+
+export function unarchiveAgent(id: string): Promise<{ archived: boolean }> {
+  return apiFetch<{ archived: boolean }>(
+    `/api/agents/${encodeURIComponent(id)}/unarchive`,
+    { method: "POST" }
+  )
+}
+
+export function sendFollowup(
+  id: string,
+  prompt: string
+): Promise<SendFollowupResponse> {
+  return apiFetch<SendFollowupResponse>(
+    `/api/agents/${encodeURIComponent(id)}/followups`,
+    {
+      method: "POST",
+      body: { prompt },
+    }
+  )
+}
+
+export function listRuns(
+  agentId: string,
+  params?: { cursor?: string; limit?: number }
+): Promise<ListResult<RunSummary>> {
+  const search = new URLSearchParams()
+  if (params?.cursor) search.set("cursor", params.cursor)
+  if (params?.limit) search.set("limit", String(params.limit))
+  const qs = search.toString()
+  return apiFetch<ListResult<RunSummary>>(
+    `/api/agents/${encodeURIComponent(agentId)}/runs${qs ? `?${qs}` : ""}`
+  )
+}
+
+export function cancelRun(agentId: string, runId: string): Promise<{ cancelled: boolean }> {
+  return apiFetch<{ cancelled: boolean }>(
+    `/api/agents/${encodeURIComponent(agentId)}/runs/${encodeURIComponent(runId)}/cancel`,
+    { method: "POST" }
+  )
 }
 
 export function getRepositories(): Promise<{ repositories: RepositoryOption[] }> {
